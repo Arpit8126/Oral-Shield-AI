@@ -1,12 +1,26 @@
 import os
+# Configure TensorFlow to minimize CPU memory usage (critical for Render's 512MB RAM limit)
+os.environ["TF_NUM_INTEROP_THREADS"] = "1"
+os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+
 import json
 import base64
+import gc
 import numpy as np
 import cv2
 import tensorflow as tf
+
+# Limit threading inside TensorFlow runtime
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
 
 # Load configuration and establish settings
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "model_config.json")
@@ -102,19 +116,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Failed to initialize Grad-CAM layer '{LAST_CONV_LAYER}': {e}")
         
-    # Warm up model to compile execution graphs
-    print("Warming up model with dummy inference...")
-    dummy_input = np.zeros((1, 224, 224, 3), dtype=np.float32)
-    # Perform standard inference warm up
-    _ = model.predict(dummy_input, verbose=0)
-    # Perform Grad-CAM warm up if constructed
-    if grad_model is not None:
-        with tf.GradientTape() as tape:
-            _, _ = grad_model(dummy_input)
-    print("Model is warmed up and ready.")
+    # Free up memory used during model loading/compilation process
+    gc.collect()
+    print("Model loaded and memory collected. Ready.")
     yield
     # Clean up (if needed) on shutdown
     print("Shutting down API...")
+
 
 # Initialize FastAPI App
 app = FastAPI(
