@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Shield, Activity, Camera, Upload, FileText, AlertTriangle, CheckCircle,
   RefreshCw, UserCheck, FileDown, Eye, Sliders, MapPin, ClipboardList,
-  Layers, Zap, ArrowLeft, ChevronRight
+  Layers, Zap, ArrowLeft, ChevronRight, Sun, Moon
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 
@@ -30,6 +30,19 @@ const genPatientId = () => {
 
 export default function App() {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+
+  // Theme support
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "dark";
+  });
+
+  const toggleTheme = () => {
+    setTheme(p => {
+      const next = p === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      return next;
+    });
+  };
 
   // Stage: "intake" = input form | "results" = output view
   const [stage, setStage] = useState("intake");
@@ -678,9 +691,12 @@ export default function App() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-black text-[#cccccc] font-serif-text">
-      <header className="sticky top-0 z-30 border-b border-[#262626] bg-black/90 backdrop-blur-md px-6 py-4">
+    <div className={`flex-1 flex flex-col bg-black text-[#cccccc] font-serif-text ${theme}`}>
+      <header className="sticky top-0 z-30 border-b border-[#262626] bg-black/90 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <h1 className="text-base sm:text-xl font-display uppercase tracking-[0.12em] sm:tracking-[0.25em] text-white font-normal">OralShield</h1>
+        <button onClick={toggleTheme} className="flex items-center justify-center p-2 rounded-full border border-[#262626] hover:bg-white/5 transition text-[#aaaaaa] hover:text-white" title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
       </header>
 
       {stage === "intake" ? <IntakeView /> : <ResultsView />}

@@ -96,3 +96,125 @@ input[type="range"]:focus {
   outline: none;
 }
 
+/* Light Mode overrides */
+.light {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* Background overrides */
+.light .bg-black {
+  background-color: #f8fafc !important;
+}
+.light .bg-black\/90 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+.light .bg-\[\#141414\] {
+  background-color: #ffffff !important;
+}
+.light .bg-\[\#0a0a0a\] {
+  background-color: #f1f5f9 !important;
+}
+.light .bg-\[\#0d0d0d\] {
+  background-color: #ffffff !important;
+}
+
+/* Border and Divide overrides */
+.light .border-\[\#262626\] {
+  border-color: #e2e8f0 !important;
+}
+.light .divide-\[\#262626\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+.light .border-\[\#3a3a3a\] {
+  border-color: #cbd5e1 !important;
+}
+.light .border-\[\#2e2e2e\] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Text overrides */
+.light .text-white {
+  color: #0f172a !important;
+}
+.light .text-\[\#cccccc\] {
+  color: #334155 !important;
+}
+.light .text-\[\#aaaaaa\] {
+  color: #475569 !important;
+}
+.light .text-\[\#999999\] {
+  color: #64748b !important;
+}
+.light .text-\[\#444444\] {
+  color: #94a3b8 !important;
+}
+.light .text-\[\#2e2e2e\] {
+  color: #94a3b8 !important;
+}
+.light .text-\[\#c3d9f3\] {
+  color: #0f766e !important;
+}
+.light .bg-\[\#c0392b\]\/10 {
+  background-color: rgba(192, 57, 43, 0.1) !important;
+}
+.light .bg-\[\#d4a017\]\/10 {
+  background-color: rgba(212, 160, 23, 0.1) !important;
+}
+
+/* Specific component tweaks */
+.light input, .light select, .light textarea {
+  color: #0f172a !important;
+}
+.light input::placeholder, .light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+.light input:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Patient ID block background */
+.light .border-\[\#262626\].text-\[\#c3d9f3\] {
+  background-color: #f0fdfa !important;
+  border-color: #ccfbf1 !important;
+}
+
+/* Hover overrides */
+.light .hover\:bg-white\/5:hover {
+  background-color: #f1f5f9 !important;
+}
+.light .hover\:bg-white\/10:hover {
+  background-color: #e2e8f0 !important;
+}
+.light .hover\:border-white:hover {
+  border-color: #0f172a !important;
+}
+.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* Slider overrides */
+.light input[type="range"]::-webkit-slider-runnable-track {
+  background: #cbd5e1 !important;
+}
+.light input[type="range"]::-moz-range-track {
+  background: #cbd5e1 !important;
+}
+.light input[type="range"]::-webkit-slider-thumb {
+  border: 1px solid #cbd5e1 !important;
+}
+.light input[type="range"]::-moz-range-thumb {
+  border: 1px solid #cbd5e1 !important;
+}
+
+/* PDF/Action boxes */
+.light .bg-white\/10 {
+  background-color: #f1f5f9 !important;
+}
+
+
