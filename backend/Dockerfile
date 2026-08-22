@@ -1,16 +1,14 @@
 FROM python:3.10-slim
 
-# Install system dependencies for OpenCV, git, and git-lfs
+# Install system dependencies for OpenCV and curl
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxrender1 \
     libxext6 \
-    git \
-    git-lfs \
+    curl \
     && rm -rf /var/lib/apt/lists/*
-
 
 WORKDIR /app
 
@@ -20,16 +18,16 @@ COPY requirements.txt .
 RUN sed -i 's/tensorflow>=/tensorflow-cpu>=/g' requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all backend files (including git history)
+# Copy all backend files
 COPY . .
 
-# Pull large Keras model via Git LFS
-RUN git lfs install
-RUN git lfs pull
+# Download the actual large model file from GitHub LFS media storage to replace the LFS pointer
+RUN curl -L -o oral_best_model.keras https://media.githubusercontent.com/media/Arpit8126/Oral-Shield-AI/main/backend/oral_best_model.keras
 
 # Hugging Face Spaces uses port 7860
 EXPOSE 7860
 
 # Start FastAPI with uvicorn on port 7860
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+
 
