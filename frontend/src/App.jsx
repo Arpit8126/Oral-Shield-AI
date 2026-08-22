@@ -305,8 +305,8 @@ export default function App() {
             <div>
               <label className="block text-[11px] font-mono-text uppercase tracking-wider text-white font-bold mb-2">Anatomical Lesion Site</label>
               <select value={lesionSite} onChange={e => setLesionSite(e.target.value)} className="w-full bg-[#0d0d0d] border border-[#262626] focus:border-white py-2.5 px-3 text-sm text-white focus:outline-none transition font-serif-text appearance-none cursor-pointer">
-                <option value="" className="text-[#aaaaaa]">-- Select Site --</option>
-                {LESION_SITES.map(s => <option key={s} value={s} className="bg-[#141414]">{s}</option>)}
+                <option value="" className="bg-[#141414] text-[#aaaaaa]">-- Select Site --</option>
+                {LESION_SITES.map(s => <option key={s} value={s} className="bg-[#141414] text-white">{s}</option>)}
               </select>
             </div>
             <div>
@@ -353,8 +353,13 @@ export default function App() {
                 <button onClick={() => setHabitHistory(p=>({...p,tobacco:!p.tobacco}))} className={`shrink-0 text-[10px] font-mono-text uppercase tracking-wider px-4 py-1.5 border transition min-w-[56px] ${habitHistory.tobacco?"border-[#d4a017] text-[#d4a017] bg-[#d4a017]/10":"border-[#262626] text-[#aaaaaa]"}`}>{habitHistory.tobacco?"Yes":"No"}</button>
                 {habitHistory.tobacco && <>
                   <select value={habitHistory.tobaccoType} onChange={e=>setHabitHistory(p=>({...p,tobaccoType:e.target.value}))} className="flex-1 bg-[#0d0d0d] border border-[#262626] py-1.5 px-2 text-xs text-white focus:outline-none font-serif-text appearance-none">
-                    <option value="">-- Type --</option>
-                    <option>Smokeless / Chewing</option><option>Betel Quid</option><option>Areca Nut</option><option>Cigarette Smoking</option><option>Bidi / Hookah</option>
+                    <option value="" className="bg-[#141414] text-[#aaaaaa]">-- Type --</option>
+                    <option className="bg-[#141414] text-white">Smokeless / Chewing</option>
+                    <option className="bg-[#141414] text-white">Betel Quid</option>
+                    <option className="bg-[#141414] text-white">Areca Nut</option>
+                    <option className="bg-[#141414] text-white">Cigarette Smoking</option>
+                    <option className="bg-[#141414] text-white">Bidi / Hookah</option>
+
                   </select>
                   <input type="number" value={habitHistory.tobaccoYears} onChange={e=>setHabitHistory(p=>({...p,tobaccoYears:e.target.value}))} placeholder="Yrs" className="w-14 bg-transparent border-b border-[#3a3a3a] focus:border-white py-1.5 px-0 text-xs text-white placeholder-[#aaaaaa] focus:outline-none text-center font-serif-text" />
                 </>}
