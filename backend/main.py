@@ -1,30 +1,18 @@
 import os
-# Configure TensorFlow to minimize CPU memory usage (critical for Render's 512MB RAM limit)
-os.environ["TF_NUM_INTEROP_THREADS"] = "1"
-os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
 import json
 import base64
 import gc
 import numpy as np
 import cv2
-import tensorflow as tf
-
-# Limit threading inside TensorFlow runtime
-tf.config.threading.set_intra_op_parallelism_threads(1)
-tf.config.threading.set_inter_op_parallelism_threads(1)
-
+import onnxruntime as ort
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-
 # Load configuration and establish settings
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "model_config.json")
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "oral_best_model.keras")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "oral_best_model.onnx")
+WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "dense_weights.npz")
 
 if not os.path.exists(CONFIG_PATH):
     raise FileNotFoundError(f"Model config not found at {CONFIG_PATH}")
@@ -37,40 +25,33 @@ CLASS_LABELS = config.get("classes", ["Cont", "Sus"])
 ACCURACY = config.get("accuracy", 0.904)
 ROC_AUC = config.get("roc_auc", 0.9609)
 
-# Global variables for loaded model and sub-models
-model = None
-grad_model = None
-LAST_CONV_LAYER = "conv5_block3_3_conv"
+# Global variables for ONNX Runtime session and weights
+ort_session = None
+W_dense = None
+W_dense_1 = None
 
-def get_gradcam_heatmap(img_tensor, grad_model_inst):
+def get_gradcam_heatmap(conv_outputs, dense_outputs, W_dense_weights, W_dense_1_weights):
     """
-    Computes Grad-CAM heatmap for ResNet50 model.
+    Computes analytical Grad-CAM heatmap for ResNet50 model using ONNX outputs and weights.
     """
     try:
-        # Compute gradient of class score with respect to feature maps of last conv layer
-        with tf.GradientTape() as tape:
-            conv_outputs, predictions = grad_model_inst(img_tensor)
-            # The model outputs a single probability value for the 'Sus' class
-            score = predictions[:, 0]
-            
-        # Get the gradients
-        grads = tape.gradient(score, conv_outputs)
+        # Active units mask where ReLU was positive (> 0)
+        active_mask = (dense_outputs > 0).astype(np.float32)
         
-        # Mean intensity of gradients for each feature map channel
-        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+        # Compute analytical weights for each channel: alpha_k = sum_m (W_dense_1_m * W_dense_km * mask_m)
+        alpha = np.dot(W_dense_weights, W_dense_1_weights.flatten() * active_mask)
         
-        # Multiply each channel in feature map by its gradient weight
-        conv_outputs = conv_outputs[0]
-        heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
-        heatmap = tf.squeeze(heatmap)
+        # Compute heatmap: ReLU(sum_k alpha_k * A_k)
+        heatmap = conv_outputs @ alpha[..., np.newaxis]
+        heatmap = np.squeeze(heatmap)
         
         # Apply ReLU to keep positive contributions, and normalize
-        heatmap = tf.maximum(heatmap, 0.0)
-        max_val = tf.math.reduce_max(heatmap)
+        heatmap = np.maximum(heatmap, 0.0)
+        max_val = np.max(heatmap)
         if max_val > 0:
             heatmap = heatmap / max_val
             
-        return heatmap.numpy()
+        return heatmap
     except Exception as e:
         print(f"Error generating Grad-CAM heatmap: {e}")
         return None
@@ -98,35 +79,29 @@ def superimpose_heatmap(original_bgr, heatmap, alpha=0.4):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load model on startup
-    global model, grad_model
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        
-    print(f"Loading Keras model from {MODEL_PATH}...")
-    # Load model with compile=False to save ~70MB+ RAM by not loading training optimizer params
-    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    global ort_session, W_dense, W_dense_1
     
-    # Construct Grad-CAM model mapping input to last conv layer output & prediction
-    try:
-        last_conv = model.get_layer(LAST_CONV_LAYER)
-        grad_model = tf.keras.models.Model(
-            model.inputs, [last_conv.output, model.output]
-        )
-        print("Grad-CAM sub-model constructed successfully.")
-    except Exception as e:
-        print(f"Failed to initialize Grad-CAM layer '{LAST_CONV_LAYER}': {e}")
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(f"ONNX model file not found at {MODEL_PATH}")
+    if not os.path.exists(WEIGHTS_PATH):
+        raise FileNotFoundError(f"Weights file not found at {WEIGHTS_PATH}")
         
-    # Free up original model reference since we only need the grad_model for predictions
-    del model
-    model = None
+    print(f"Loading ONNX model from {MODEL_PATH}...")
+    # Limit ONNX threads to 1 to minimize memory usage
+    sess_options = ort.SessionOptions()
+    sess_options.intra_op_num_threads = 1
+    sess_options.inter_op_num_threads = 1
+    ort_session = ort.InferenceSession(MODEL_PATH, sess_options)
+    
+    print(f"Loading weights from {WEIGHTS_PATH}...")
+    weights = np.load(WEIGHTS_PATH)
+    W_dense = weights['W_dense']
+    W_dense_1 = weights['W_dense_1']
+    
     gc.collect()
-    print("Model loaded and memory collected. Ready.")
+    print("ONNX model and weights loaded successfully.")
     yield
-    # Clean up (if needed) on shutdown
     print("Shutting down API...")
-
-
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -155,7 +130,7 @@ def read_root():
             "roc_auc": ROC_AUC,
             "optimal_threshold": OPTIMAL_THRESHOLD
         },
-        "model_loaded": model is not None
+        "model_loaded": ort_session is not None
     }
 
 @app.post("/predict")
@@ -185,12 +160,15 @@ async def predict(
     
     # 4. Perform prediction
     try:
-        # Use grad_model directly to avoid calling model.predict (saving overhead and memory)
-        _, predictions = grad_model(img_tensor, training=False)
-        prob = float(predictions[0][0])
+        # Run ONNX Runtime session
+        input_name = ort_session.get_inputs()[0].name
+        onnx_outputs = ort_session.run(None, {input_name: img_tensor.astype(np.float32)})
+        
+        conv_outputs = onnx_outputs[0][0]  # shape: (7, 7, 2048)
+        dense_outputs = onnx_outputs[1][0] # shape: (256,)
+        prob = float(onnx_outputs[2][0][0])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference engine failure: {str(e)}")
-
         
     # Classify based on optimal threshold
     is_suspicious = prob >= OPTIMAL_THRESHOLD
@@ -203,8 +181,8 @@ async def predict(
     
     # 5. Optional: Grad-CAM overlay
     gradcam_base64 = None
-    if gradcam and grad_model is not None:
-        heatmap = get_gradcam_heatmap(img_tensor, grad_model)
+    if gradcam and ort_session is not None:
+        heatmap = get_gradcam_heatmap(conv_outputs, dense_outputs, W_dense, W_dense_1)
         if heatmap is not None:
             superimposed_bgr = superimpose_heatmap(img_bgr, heatmap, alpha=0.4)
             if superimposed_bgr is not None:
