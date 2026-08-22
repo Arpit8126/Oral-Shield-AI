@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: black;
+    color: white;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: "Cormorant Garamond", serif;
+  }
+  input, select, textarea {
+    background-color: transparent !important;
+    color: white !important;
+  }
+  /* Webkit autocomplete overrides to prevent white backgrounds */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px black inset !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
+}
+
+/* Custom range slider — fully visible track on all browsers */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: grab;
+  /* Use padding NOT height so the track stays thin but the grab area is large */
+  padding: 10px 0;
+  height: auto;
+  display: block;
+  width: 100%;
+}
+input[type="range"]:active {
+  cursor: grabbing;
+}
+
+/* Webkit track */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #3a3a3a;
+  border-radius: 0;
+}
+
+/* Firefox track */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #3a3a3a;
+  border-radius: 0;
+  border: none;
+}
+
+/* Firefox progress fill */
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  background: white;
+  border-radius: 0;
+}
+
+/* Webkit thumb */
+input[type="range"]::-webkit-slider-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 9999px;
+  background-color: white;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid black;
+  margin-top: -6px;
+}
+
+/* Firefox thumb */
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 9999px;
+  background-color: white;
+  cursor: pointer;
+  border: 1px solid black;
+}
+
+/* Focus outline */
+input[type="range"]:focus {
+  outline: none;
+}
+

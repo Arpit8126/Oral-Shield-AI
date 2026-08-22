@@ -1,0 +1,5 @@
+*.h5
+best_hospital_model.weights.h5
+__pycache__/
+*.pyc
+

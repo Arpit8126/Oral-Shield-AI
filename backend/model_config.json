@@ -1,0 +1,5 @@
+{
+  "classes": ["Cont", "Sus"],
+  "optimal_threshold": 0.56,
+  "roc_auc": 0.9856
+}
