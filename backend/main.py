@@ -104,7 +104,8 @@ async def lifespan(app: FastAPI):
         raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
         
     print(f"Loading Keras model from {MODEL_PATH}...")
-    model = tf.keras.models.load_model(MODEL_PATH)
+    # Load model with compile=False to save ~70MB+ RAM by not loading training optimizer params
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
     
     # Construct Grad-CAM model mapping input to last conv layer output & prediction
     try:
@@ -116,12 +117,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Failed to initialize Grad-CAM layer '{LAST_CONV_LAYER}': {e}")
         
-    # Free up memory used during model loading/compilation process
+    # Free up original model reference since we only need the grad_model for predictions
+    del model
+    model = None
     gc.collect()
     print("Model loaded and memory collected. Ready.")
     yield
     # Clean up (if needed) on shutdown
     print("Shutting down API...")
+
 
 
 # Initialize FastAPI App
@@ -181,9 +185,12 @@ async def predict(
     
     # 4. Perform prediction
     try:
-        prob = float(model.predict(img_tensor, verbose=0)[0][0])
+        # Use grad_model directly to avoid calling model.predict (saving overhead and memory)
+        _, predictions = grad_model(img_tensor, training=False)
+        prob = float(predictions[0][0])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference engine failure: {str(e)}")
+
         
     # Classify based on optimal threshold
     is_suspicious = prob >= OPTIMAL_THRESHOLD
